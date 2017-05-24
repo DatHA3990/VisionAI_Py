@@ -17,7 +17,7 @@ FILE_NAME = "name.txt"
 
 DIR_IMAGE = "images"
 
-def new_color(name="", bgr=[0] * SCALAR_SIZE, difference=[0] * SCALAR_SIZE, accuracy = 1):
+def new_color(name="", bgr=[0] * SCALAR_SIZE, difference=[0] * SCALAR_SIZE, accuracy=1):
 	return [name, bgr, difference, accuracy]
 
 def get_bgr_difference(bgr):
@@ -45,11 +45,39 @@ def get_trained_colors():
 				bgr = []
 				for color_images in os.walk(location + '/' + DIR_IMAGE):
 					for image_file in color_images[2]:
-						bgr.append(np.average(np.average(cv.imread(location + '/' + DIR_IMAGE + '/' + image_file, cv.IMREAD_COLOR), axis=0), axis=0))
+						bgr.append(
+							np.average(np.average(cv.imread(location + '/' + DIR_IMAGE + '/' + image_file, cv.IMREAD_COLOR), axis=0),
+							           axis=0))
 				bgr = np.average(bgr, axis=0)
 				color.append(new_color(open(location + DIR_NAME + '/' + FILE_NAME).read(), bgr, get_bgr_difference(bgr)))
 	return color
 
+def get_position_in_list(myList, v):
+	for i, x in enumerate(myList):
+		if v in x:
+			return i, x.index(v)
+
+def get_target_coordinates(color, image, target_color_name, tolerance):
+	processed = cv.blur(image, (15, 15))
+	tolerance = 40
+	num = get_position_in_list(colors, target_color_name)
+	mask = cv.inRange(processed, np.subtract(colors[num[0]][COLOR_BGR], tolerance), np.add(colors[num[0]][COLOR_BGR], tolerance))
+	res = cv.bitwise_and(image, image, mask=mask)
+	img, contours, hierarchy = cv.findContours(mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+	cnt = contours[0]
+	epsilon = 0.1 * cv.arcLength(cnt, True)
+	approx = cv.approxPolyDP(cnt, epsilon, True)
+	return np.average(np.average(approx, axis=0), axis=0)
+
+def draw_target(image, coordinates):
+	cv.circle(image, (int(coordinates[0]), int(coordinates[1])), 5, (255, 0, 255), -1)
+	cv.namedWindow("image", cv.WINDOW_AUTOSIZE)
+	cv.imshow("image", image)
+	cv.waitKey(0)
+
 colors = get_trained_colors()
-match = get_color(cv.imread(DIR_TEST_DATA + '/' + "blue.jpg", cv.IMREAD_COLOR), colors)
-print match[COLOR_NAME], match[COLOR_ACCURACY]
+image = cv.imread(DIR_TEST_DATA + '/' + "boiler3.jpg", cv.IMREAD_COLOR)
+coordinates = get_target_coordinates(colors, image, "target", 40)
+draw_target(image, coordinates)
+input()
+cv.destroyAllWindows()
