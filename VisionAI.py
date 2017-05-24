@@ -17,20 +17,14 @@ FILE_NAME = "name.txt"
 
 DIR_IMAGE = "images"
 
-def new_color(name="", bgr=[0] * SCALAR_SIZE, difference=[0] * SCALAR_SIZE, accuracy=1):
-	return [name, bgr, difference, accuracy]
-
 def get_bgr_difference(bgr):
 	return [bgr[0] - bgr[1], bgr[1] - bgr[2], bgr[2] - bgr[0]]
-
-def get_color_accuracy(color1, color2):
-	return 1 - (np.average(abs(np.subtract(color1, color2)))) / 255
 
 def get_color(image, colors):
 	difference = get_bgr_difference(np.average(np.average(image, axis=0), axis=0))
 	accuracy = []
 	for color in colors:
-		accuracy.append(get_color_accuracy(color[COLOR_DIFFERENCE], difference))
+		accuracy.append(1 - (np.average(abs(np.subtract((color[COLOR_DIFFERENCE], difference))))/ 255))
 	color_accuracy = max(accuracy)
 	color_match = colors[accuracy.index(color_accuracy)]
 	color_match[COLOR_ACCURACY] = color_accuracy
@@ -45,11 +39,9 @@ def get_trained_colors():
 				bgr = []
 				for color_images in os.walk(location + '/' + DIR_IMAGE):
 					for image_file in color_images[2]:
-						bgr.append(
-							np.average(np.average(cv.imread(location + '/' + DIR_IMAGE + '/' + image_file, cv.IMREAD_COLOR), axis=0),
-							           axis=0))
+						bgr.append(np.average(np.average(cv.imread(location + '/' + DIR_IMAGE + '/' + image_file, cv.IMREAD_COLOR), axis=0), axis=0))
 				bgr = np.average(bgr, axis=0)
-				color.append(new_color(open(location + DIR_NAME + '/' + FILE_NAME).read(), bgr, get_bgr_difference(bgr)))
+				color.append([open(location + DIR_NAME + '/' + FILE_NAME).read(), bgr, get_bgr_difference(bgr), 1])
 	return color
 
 def get_position_in_list(myList, v):
