@@ -58,23 +58,17 @@ def get_position_in_list(myList, v):
 			return i, x.index(v)
 
 def get_target_coordinates(color, image, target_color_name, tolerance):
-	processed = cv.blur(image, (15, 15))
-	tolerance = 40
-	num = get_position_in_list(colors, target_color_name)
-	mask = cv.inRange(processed, np.subtract(colors[num[0]][COLOR_BGR], tolerance), np.add(colors[num[0]][COLOR_BGR], tolerance))
-	res = cv.bitwise_and(image, image, mask=mask)
-	img, contours, hierarchy = cv.findContours(mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-	cnt = contours[0]
-	epsilon = 0.1 * cv.arcLength(cnt, True)
-	approx = cv.approxPolyDP(cnt, epsilon, True)
+	color = colors[get_position_in_list(colors, target_color_name)[0]][COLOR_BGR]
+	cnt = cv.findContours(cv.inRange(cv.blur(image, (15, 15)), np.subtract(color, tolerance), np.add(color, tolerance)), cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)[1][0]
+	approx = cv.approxPolyDP(cnt, 0.1 * cv.arcLength(cnt, True), True)
 	return np.average(np.average(approx, axis=0), axis=0)
 
 def draw_target(image, coordinates):
 	cv.circle(image, (int(coordinates[0]), int(coordinates[1])), 5, (255, 0, 255), -1)
-	cv.namedWindow("image", cv.WINDOW_AUTOSIZE)
 	cv.imshow("image", image)
 	cv.waitKey(0)
 
+cv.namedWindow("image", cv.WINDOW_AUTOSIZE)
 colors = get_trained_colors()
 image = cv.imread(DIR_TEST_DATA + '/' + "boiler3.jpg", cv.IMREAD_COLOR)
 coordinates = get_target_coordinates(colors, image, "target", 40)
