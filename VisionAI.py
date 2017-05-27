@@ -30,7 +30,7 @@ def get_color(image, colors):
 	difference = get_bgr_difference(np.average(np.average(image, axis=0), axis=0))
 	accuracy = []
 	for color in colors:
-		accuracy.append(1 - (np.average(abs(np.subtract((color[COLOR_DIFFERENCE], difference))))/ 255))
+		accuracy.append(1 - (np.average(abs(np.subtract((color[COLOR_DIFFERENCE], difference)))) / 255))
 	color_accuracy = max(accuracy)
 	color_match = colors[accuracy.index(color_accuracy)]
 	color_match[COLOR_ACCURACY] = color_accuracy
@@ -45,7 +45,9 @@ def get_trained_colors():
 				bgr = []
 				for color_images in os.walk(location + '/' + DIR_IMAGE):
 					for image_file in color_images[2]:
-						bgr.append(np.average(np.average(cv.imread(location + '/' + DIR_IMAGE + '/' + image_file, cv.IMREAD_COLOR), axis=0), axis=0))
+						bgr.append(
+							np.average(np.average(cv.imread(location + '/' + DIR_IMAGE + '/' + image_file, cv.IMREAD_COLOR), axis=0),
+							           axis=0))
 				bgr = np.average(bgr, axis=0)
 				color.append([open(location + DIR_NAME + '/' + FILE_NAME).read(), bgr, get_bgr_difference(bgr), 1])
 	return color
@@ -55,36 +57,44 @@ def get_position_in_list(myList, v):
 		if v in x:
 			return i, x.index(v)
 
-def get_target_coordinates_bgr(colors, image, target_color_name, tolerance):
+def get_target_image_bgr(colors, image, target_color_name, tolerance):
 	color = colors[get_position_in_list(colors, target_color_name)[0]][COLOR_BGR]
-	cnt = cv.findContours(cv.inRange(cv.blur(image, (15, 15)), np.subtract(color, tolerance), np.add(color, tolerance)), cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)[1][0]
-	approx = cv.approxPolyDP(cnt, 0.1 * cv.arcLength(cnt, True), True)
-	return np.average(np.average(approx, axis=0), axis=0)
+	image = cv.inRange(cv.blur(image, (15, 15)), np.subtract(color, tolerance), np.add(color, tolerance))
+	return image
 
-def get_target_coordinates_hsv(image, tolerance):
-	cv.threshold(image,0,255,cv.THRESH_BINARY_INV)
+def get_target_image_hsv(image, tolerance):
+	cv.threshold(image, 0, 255, cv.THRESH_BINARY_INV)
 	cv.cvtColor(image, cv.COLOR_BGR2HSV)
 	image = cv.inRange(cv.cvtColor(image, cv.COLOR_BGR2HSV), tolerance[0], tolerance[1])
+	kernel = np.ones((10, 10), np.uint8)
+	image = cv.dilate(image, kernel, iterations=1)
+	cv.imshow("hsv", image)
 	return image
+
+def get_target_coordinate(image):
+	x = cv.findContours(image, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)[1]
+	y = []
+	cnt = []
+	for i in x:
+		y.append(np.average(i, axis=0))
+	cnt = np.average(y, axis=0)[0]
+	return cnt
 
 def draw_target(image, coordinates):
 	cv.circle(image, (int(coordinates[0]), int(coordinates[1])), 5, (255, 0, 255), -1)
 	cv.imshow("image", image)
 	cv.waitKey(1)
 
-def nothing(something):
-	pass
-
 def draw_trackbar_hsv():
 	window_name = 'tracker'
 	cv.namedWindow(window_name)
-	for i in ['h','s','v']:
+	for i in ['h', 's', 'v']:
 		for j in range(2):
-			cv.createTrackbar(i+str(j), 'tracker', 0, 255, nothing)
+			cv.createTrackbar(i + str(j), 'tracker', 0, 255, nothing)
 
 def get_trackbar():
 	hsv = np.array([[0] * 3] * 2)
-	hsv[0][0] = cv.getTrackbarPos('h0','tracker')
+	hsv[0][0] = cv.getTrackbarPos('h0', 'tracker')
 	hsv[1][0] = cv.getTrackbarPos('h1', 'tracker')
 	hsv[0][1] = cv.getTrackbarPos('s0', 'tracker')
 	hsv[1][1] = cv.getTrackbarPos('s1', 'tracker')
@@ -105,7 +115,6 @@ def set_trackbar():
 	cv.setTrackbarPos('v0', 'tracker', hsv[2])
 	cv.setTrackbarPos('v1', 'tracker', hsv[5])
 
-
 def save_trackbar_hsv(hsv):
 	name = DIR_SAVED_DATA + '/' + FILE_SAVED_HSV
 	open(name, "w").close()
@@ -116,18 +125,15 @@ def save_trackbar_hsv(hsv):
 			text_file.write(',')
 	text_file.close()
 
-#colors = get_trained_colors()
 image = cv.imread(DIR_TEST_DATA + '/' + "boiler3.jpg", cv.IMREAD_COLOR)
-#coordinates = get_target_coordinates_bgr(colors, image, "target", 40)
+cv.namedWindow("image")
 cv.namedWindow("hsv")
 draw_trackbar_hsv()
 set_trackbar()
 while True:
 	hsv_val = get_trackbar()
-	hsv = get_target_coordinates_hsv(image, hsv_val)
+	hsv_image = get_target_image_hsv(image, hsv_val)
+	coordinate = get_target_coordinate(hsv_image)
 	save_trackbar_hsv(hsv_val)
-	cv.imshow("hsv", hsv)
-	cv.waitKey(1)
-#draw_target(image, coordinates)
-input()
+	draw_target(image, coordinate)
 cv.destroyAllWindows()
